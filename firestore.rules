@@ -1,0 +1,199 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- GLOBAL HELPERS ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidRank(rank) {
+      return rank in ['E', 'D', 'C', 'B', 'A', 'S'];
+    }
+
+    // --- ENTITY VALIDATION HELPERS ---
+    function isValidHunterProfile(data, userId) {
+      return data.userId == userId &&
+             data.userId == request.auth.uid &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+             isValidRank(data.hunterRank) &&
+             data.level is int && data.level >= 1 && data.level <= 999 &&
+             data.totalXp is int && data.totalXp >= 0 &&
+             data.strStat is int && data.strStat >= 0 &&
+             data.endStat is int && data.endStat >= 0 &&
+             data.vitStat is int && data.vitStat >= 0 &&
+             data.agiStat is int && data.agiStat >= 0 &&
+             data.currentStreakDays is int && data.currentStreakDays >= 0 &&
+             data.dailyTargetVolumeKg is number && data.dailyTargetVolumeKg >= 0 &&
+             data.dailyQuestCompleted is bool &&
+             (!('lastQuestDate' in data) || (data.lastQuestDate is string && data.lastQuestDate.size() <= 20)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidWorkoutRoutine(data, userId) {
+      return data.userId == userId &&
+             data.userId == request.auth.uid &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+             data.splitLabel is string && data.splitLabel.size() <= 40 &&
+             isValidRank(data.targetDifficultyRank) &&
+             data.exercises is list && data.exercises.size() >= 1 && data.exercises.size() <= 30 &&
+             data.exercises[0] is map &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidWorkoutSession(data, userId) {
+      return data.userId == userId &&
+             data.userId == request.auth.uid &&
+             data.routineId is string && data.routineId.size() >= 1 && data.routineId.size() <= 128 &&
+             data.routineName is string && data.routineName.size() >= 1 && data.routineName.size() <= 80 &&
+             data.status in ['IN_PROGRESS', 'COMPLETED', 'ABANDONED'] &&
+             data.startedAtMs is int && data.startedAtMs >= 0 &&
+             data.completedAtMs is int && data.completedAtMs >= 0 &&
+             data.totalVolumeKg is number && data.totalVolumeKg >= 0 &&
+             data.previousVolumeKg is number && data.previousVolumeKg >= 0 &&
+             data.improvementPercent is number &&
+             data.xpEarned is int && data.xpEarned >= 0 &&
+             data.estimatedCalories is int && data.estimatedCalories >= 0 &&
+             data.feelingNote is string && data.feelingNote.size() <= 300 &&
+             data.healthSynced is bool &&
+             data.loggedSets is list && data.loggedSets.size() <= 120 &&
+             (data.loggedSets.size() == 0 || data.loggedSets[0] is map) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // --- COLLECTION RULES ---
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'displayName', 'hunterRank', 'level', 'totalXp',
+                         'strStat', 'endStat', 'vitStat', 'agiStat',
+                         'currentStreakDays', 'dailyTargetVolumeKg', 'dailyQuestCompleted',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'displayName', 'hunterRank', 'level', 'totalXp',
+                         'strStat', 'endStat', 'vitStat', 'agiStat',
+                         'currentStreakDays', 'dailyTargetVolumeKg', 'dailyQuestCompleted',
+                         'lastQuestDate', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidHunterProfile(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidHunterProfile(incoming(), userId) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayName', 'hunterRank', 'level', 'totalXp',
+                         'strStat', 'endStat', 'vitStat', 'agiStat',
+                         'currentStreakDays', 'dailyTargetVolumeKg', 'dailyQuestCompleted',
+                         'lastQuestDate', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      match /routines/{routineId} {
+        allow get: if isOwner(userId) && isValidId(routineId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(routineId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'name', 'splitLabel', 'targetDifficultyRank',
+                           'exercises', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'name', 'splitLabel', 'targetDifficultyRank',
+                           'exercises', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidWorkoutRoutine(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(routineId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidWorkoutRoutine(incoming(), userId) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'name', 'splitLabel', 'targetDifficultyRank',
+                           'exercises', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(routineId);
+      }
+
+      match /sessions/{sessionId} {
+        allow get: if isOwner(userId) && isValidId(sessionId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(sessionId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'routineId', 'routineName', 'status',
+                           'startedAtMs', 'completedAtMs', 'totalVolumeKg',
+                           'previousVolumeKg', 'improvementPercent', 'xpEarned',
+                           'estimatedCalories', 'feelingNote', 'healthSynced',
+                           'loggedSets', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'routineId', 'routineName', 'status',
+                           'startedAtMs', 'completedAtMs', 'totalVolumeKg',
+                           'previousVolumeKg', 'improvementPercent', 'xpEarned',
+                           'estimatedCalories', 'feelingNote', 'healthSynced',
+                           'loggedSets', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidWorkoutSession(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(sessionId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().routineId == existing().routineId &&
+                         isValidWorkoutSession(incoming(), userId) &&
+                         (
+                           (existing().status == 'IN_PROGRESS' &&
+                            incoming().diff(existing()).affectedKeys().hasOnly([
+                              'routineName', 'status', 'completedAtMs', 'totalVolumeKg',
+                              'previousVolumeKg', 'improvementPercent', 'xpEarned',
+                              'estimatedCalories', 'feelingNote', 'healthSynced',
+                              'loggedSets', 'updatedAt'
+                            ])) ||
+                           (existing().status == 'COMPLETED' &&
+                            incoming().status == 'COMPLETED' &&
+                            incoming().diff(existing()).affectedKeys().hasOnly([
+                              'healthSynced', 'updatedAt'
+                            ]))
+                         );
+
+        allow delete: if isOwner(userId) && isValidId(sessionId);
+      }
+    }
+  }
+}

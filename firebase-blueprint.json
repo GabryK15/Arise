@@ -1,0 +1,243 @@
+{
+  "entities": {
+    "HunterProfile": {
+      "title": "HunterProfile",
+      "description": "User RPG leveling profile, Hunter rank, derived stats, and daily quest progress.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated Firebase UID owning this profile."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Hunter display name."
+        },
+        "hunterRank": {
+          "type": "string",
+          "enum": ["E", "D", "C", "B", "A", "S"],
+          "description": "Current Solo Leveling Hunter rank."
+        },
+        "level": {
+          "type": "integer",
+          "description": "Current Hunter level (>= 1)."
+        },
+        "totalXp": {
+          "type": "integer",
+          "description": "Accumulated experience points."
+        },
+        "strStat": {
+          "type": "integer",
+          "description": "Strength stat derived from peak estimated 1RM progression."
+        },
+        "endStat": {
+          "type": "integer",
+          "description": "Endurance stat derived from cumulative weekly training volume."
+        },
+        "vitStat": {
+          "type": "integer",
+          "description": "Vitality stat derived from workout consistency and recovery."
+        },
+        "agiStat": {
+          "type": "integer",
+          "description": "Agility stat derived from session density and form quality."
+        },
+        "currentStreakDays": {
+          "type": "integer",
+          "description": "Consecutive active training days."
+        },
+        "dailyTargetVolumeKg": {
+          "type": "number",
+          "description": "Daily quest target volume in kilograms."
+        },
+        "dailyQuestCompleted": {
+          "type": "boolean",
+          "description": "Whether today's daily quest is completed."
+        },
+        "lastQuestDate": {
+          "type": "string",
+          "description": "ISO local date (YYYY-MM-DD) of last quest progress."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when last updated."
+        }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "hunterRank",
+        "level",
+        "totalXp",
+        "strStat",
+        "endStat",
+        "vitStat",
+        "agiStat",
+        "currentStreakDays",
+        "dailyTargetVolumeKg",
+        "dailyQuestCompleted",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WorkoutRoutine": {
+      "title": "WorkoutRoutine",
+      "description": "User-authored training split routine with locked sets/reps and suggested weights.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated Firebase UID."
+        },
+        "name": {
+          "type": "string",
+          "description": "Routine title (e.g., Push Dungeon A)."
+        },
+        "splitLabel": {
+          "type": "string",
+          "description": "Muscle split tag (e.g., Petto / Spalle / Tricipiti)."
+        },
+        "targetDifficultyRank": {
+          "type": "string",
+          "enum": ["E", "D", "C", "B", "A", "S"],
+          "description": "Dungeon difficulty rank."
+        },
+        "exercises": {
+          "type": "array",
+          "description": "Ordered list of programmed exercises (1..30)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when last updated."
+        }
+      },
+      "required": [
+        "userId",
+        "name",
+        "splitLabel",
+        "targetDifficultyRank",
+        "exercises",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WorkoutSession": {
+      "title": "WorkoutSession",
+      "description": "Logged workout session with sets, RPE, failure flags, XP earned, and Health Connect status.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated Firebase UID."
+        },
+        "routineId": {
+          "type": "string",
+          "description": "ID of the routine executed."
+        },
+        "routineName": {
+          "type": "string",
+          "description": "Routine display name."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["IN_PROGRESS", "COMPLETED", "ABANDONED"],
+          "description": "Session lifecycle status."
+        },
+        "startedAtMs": {
+          "type": "integer",
+          "description": "Epoch millis when workout started."
+        },
+        "completedAtMs": {
+          "type": "integer",
+          "description": "Epoch millis when workout finished (0 if active)."
+        },
+        "totalVolumeKg": {
+          "type": "number",
+          "description": "Total volume lifted in kg."
+        },
+        "previousVolumeKg": {
+          "type": "number",
+          "description": "Previous equivalent session volume in kg."
+        },
+        "improvementPercent": {
+          "type": "number",
+          "description": "Percentage improvement over previous session."
+        },
+        "xpEarned": {
+          "type": "integer",
+          "description": "Experience points awarded."
+        },
+        "estimatedCalories": {
+          "type": "integer",
+          "description": "Estimated kcal burned."
+        },
+        "feelingNote": {
+          "type": "string",
+          "description": "User feeling / AI summary note."
+        },
+        "healthSynced": {
+          "type": "boolean",
+          "description": "Whether session was written to Health Connect."
+        },
+        "loggedSets": {
+          "type": "array",
+          "description": "Recorded sets during the session (0..120)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when last updated."
+        }
+      },
+      "required": [
+        "userId",
+        "routineId",
+        "routineName",
+        "status",
+        "startedAtMs",
+        "completedAtMs",
+        "totalVolumeKg",
+        "previousVolumeKg",
+        "improvementPercent",
+        "xpEarned",
+        "estimatedCalories",
+        "feelingNote",
+        "healthSynced",
+        "loggedSets",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/HunterProfile" },
+      "description": "Private Hunter RPG profile document for the authenticated user."
+    },
+    "/users/{userId}/routines/{routineId}": {
+      "schema": { "$ref": "#/entities/WorkoutRoutine" },
+      "description": "User's custom gym workout routines."
+    },
+    "/users/{userId}/sessions/{sessionId}": {
+      "schema": { "$ref": "#/entities/WorkoutSession" },
+      "description": "User's logged gym workout sessions."
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "ARISE System",
+  "description": "Tracker palestra stile Solo Leveling con AI Coach in tempo reale, Pose Detection, sincronizzazione Cloud/Offline e Health Connect.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
